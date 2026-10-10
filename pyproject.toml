@@ -1,0 +1,8 @@
+# Python formatting. Format with:  yapf --in-place --recursive skills tests
+# The lint rules live in .pylintrc.
+
+[tool.yapf]
+based_on_style = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

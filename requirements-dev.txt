@@ -1,0 +1,4 @@
+-r skills/decompose-image/requirements.txt
+pylint>=3
+yapf
+pytest
