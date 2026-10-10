@@ -286,20 +286,31 @@ def redraw_match_percent(pixels, redrawn_pixels):
 
     The blend test asks, for red, green, and blue separately, whether the
     original's value lies between the lowest and highest values the redraw
-    has nearby. Away from edges the redraw has one color nearby, so the
-    test is the same as the plain closeness test.
+    has nearby, give or take a tolerance. Away from edges the redraw has
+    one color nearby, so this comes down to asking whether each of the
+    three values is close to that color's.
 
-    Anything the breakdown leaves out lowers the score: a missing shape, a
+    This is a little more forgiving than a true blend test, since it also
+    accepts colors that are not an exact mix of the two neighbors, as long
+    as each of red, green, and blue falls in range. So a missing band up
+    to about four pixels wide, lying between two shapes whose colors
+    bracket its own, is not noticed. Anything else the breakdown leaves
+    out lowers the score by its share of the picture: a missing shape, a
     dropped color, or a thin line shows the wrong color over its whole
     area. A shape more than a couple of pixels out of place does too.
     """
+    # A pixel's neighborhood runs SOFT_EDGE_REACH_PIXELS to each side of it
+    # plus the pixel itself. It spreads across and down the image but not
+    # across the three color values, hence the 1.
     reach = 2 * SOFT_EDGE_REACH_PIXELS + 1
-    neighborhood = (reach, reach, 1)  # across and down, but not across channels
+    neighborhood = (reach, reach, 1)
     lowest_nearby = ndimage.minimum_filter(redrawn_pixels, size=neighborhood)
     highest_nearby = ndimage.maximum_filter(redrawn_pixels, size=neighborhood)
-    # The plain closeness test measures straight-line distance over all
-    # three channels together. Spread evenly, that distance is this much
-    # on each channel.
+    # REDRAW_MATCH_TOLERANCE is a straight-line distance over red, green,
+    # and blue together. A color that far away, with the difference spread
+    # evenly, is off by this much on each of the three. Testing each value
+    # separately against this is slightly stricter than the straight-line
+    # test when the whole difference sits in one of the three.
     channel_count = pixels.shape[-1]
     channel_tolerance = REDRAW_MATCH_TOLERANCE / math.sqrt(channel_count)
     within_blend_range = ((pixels >= lowest_nearby - channel_tolerance) &

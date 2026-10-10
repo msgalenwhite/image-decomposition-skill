@@ -77,9 +77,10 @@ python3 skills/decompose-image/scripts/rename_shapes.py my-breakdown --shape pin
 - A hidden part is a best guess. In the picture above, the yellow piece is closed off straight across where the balloon covers it, and the hills' hidden lower halves are uncertain because only a shallow arc of each shows.
 - Layer order comes from overlaps and can be fooled by unusual arrangements, so the skill tells the agent to check it by eye.
 - A shape split in two by a shape in front of it is reported as two shapes, and a shape hidden entirely is not found.
-- Polygons have at most 12 corners, so a six-pointed star is found and an eight-pointed one is reported as `irregular`. A side shorter than 2% of the canvas width is treated as a blunted point and dropped, and points sharper than about 20 degrees come back slightly blunt.
+- Polygons have at most 12 corners, so a six-pointed star is found and an eight-pointed one is reported as `irregular`. A shape with ten or more even sides bends so gently that it is reported as a circle or ellipse. A side shorter than 2% of the canvas width is treated as a blunted point and dropped, and points sharper than about 20 degrees come back slightly blunt.
 - A rounded rectangle is recognized only when all four corners show. Partly hidden, or cut by the canvas edge, it is reported as a plain rectangle or as `irregular`.
 - When two touching shapes could each be in front, the choice between them is arbitrary. The redraw looks the same either way, but the layer order may be wrong.
+- The accuracy score measures area, so it cannot see very small omissions. A missing shape smaller than about half a percent of the picture still scores above 99.5, and so does a missing band up to about four pixels wide between two shapes whose colors lie either side of its own. The side-by-side preview is the check for those.
 
 ## Develop
 

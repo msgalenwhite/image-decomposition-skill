@@ -109,9 +109,14 @@ def main(arguments):
     # The folder is made only after measuring succeeds, so a refused image
     # does not leave an empty folder behind.
     output_folder = options.output_folder or options.image.parent
-    output_folder.mkdir(parents=True, exist_ok=True)
-    write_breakdown_files(breakdown, output_folder)
-    preview_image.save(output_folder / 'breakdown-preview.png')
+    try:
+        output_folder.mkdir(parents=True, exist_ok=True)
+        write_breakdown_files(breakdown, output_folder)
+        preview_image.save(output_folder / 'breakdown-preview.png')
+    except OSError as error:
+        print(f'Could not write the breakdown to {output_folder}: {error}',
+              file=sys.stderr)
+        return 1
     print(
         json.dumps({
             'colors': len(breakdown['palette']),

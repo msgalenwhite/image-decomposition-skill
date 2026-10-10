@@ -145,12 +145,21 @@ def main(arguments):
     except RenameError as error:
         print(error, file=sys.stderr)
         return 1
-    except (OSError, json.JSONDecodeError) as error:
-        print(f'Could not read {breakdown_path}: {error}', file=sys.stderr)
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as error:
+        print(f'Could not read {breakdown_path} as a breakdown: {error!r}',
+              file=sys.stderr)
         return 1
-    breakdown_path.write_text(json.dumps(breakdown, indent=2) + '\n')
-    (options.folder / 'breakdown.md').write_text(
-        breakdown_report.breakdown_as_markdown(breakdown))
+    # Both texts are prepared before either file is touched, and the
+    # Markdown is written first: if it cannot be written, the JSON is
+    # still the old one and the two files still agree.
+    json_text = json.dumps(breakdown, indent=2) + '\n'
+    markdown_text = breakdown_report.breakdown_as_markdown(breakdown)
+    try:
+        (options.folder / 'breakdown.md').write_text(markdown_text)
+        breakdown_path.write_text(json_text)
+    except OSError as error:
+        print(f'Could not write to {options.folder}: {error}', file=sys.stderr)
+        return 1
     print(
         json.dumps({'layers_back_to_front': breakdown['layers_back_to_front']}))
     return 0

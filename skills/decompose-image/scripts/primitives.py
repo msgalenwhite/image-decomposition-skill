@@ -49,16 +49,30 @@ MAXIMUM_POLYGON_POINTS = 12
 # corners, and a curved bite left by a shape in front traces as a dozen
 # that collapse into one rebuilt corner or one straight cut. So the limit
 # on the finished polygon is checked afterwards, and this looser limit only
-# stops work early on outlines that are plainly curves.
+# stops work early on outlines that are plainly curves. Forty-eight is the
+# twelve corners a finished polygon may have, each traced double, plus a
+# further two dozen for a couple of curved bites.
 MAXIMUM_TRACED_CORNERS = 48
 
-# A straight line needs at least this many points before fitting one is
-# more trustworthy than simply joining the two ends.
+# A run of corners that all turn the same way, each by less than this, is
+# a curve and not a polygon. A regular eight-sided shape turns 45 degrees
+# at each corner, so it stays a polygon; shapes with ten or more even sides
+# turn 36 degrees or less and are treated as round.
+GENTLE_TURN_LIMIT_DEGREES = 40.0
+
+# How many gentle same-way corners in a row make a curve. Fewer than four
+# happen in ordinary polygons, such as a kite or a shallow arrowhead.
+GENTLE_TURNS_IN_A_CURVE = 4
+
+# A line fitted through two or three points just joins them up, wobble
+# included, so with fewer than four the two ends are joined directly.
 MINIMUM_POINTS_TO_FIT_A_LINE = 4
 
 # When solving for an ellipse, a determinant closer to zero than this means
 # the outline points lie along a straight line or a parabola, which has no
-# center to solve for.
+# center to solve for. The numbers involved are scaled to be near one, and
+# rounding in the arithmetic leaves errors of about a million-millionth,
+# so anything smaller than that is zero for practical purposes.
 NO_ELLIPSE_CENTER_DETERMINANT = 1e-12
 
 # Each polygon edge is refitted as a straight line through its outline
@@ -674,6 +688,49 @@ def without_blunt_tips(edges, shortest_real_edge):
     return real_edges
 
 
+def traces_a_curve(edges):
+    """Says whether a run of visible edges bends round like a curve.
+
+    A curve traces as several short edges that each turn a little, all the
+    same way. A polygon's corners turn sharply, or turn back and forth as a
+    star's do. Hidden edges are skipped: a bite left by a round shape in
+    front is expected to be curved and says nothing about this shape.
+    """
+    edge_count = len(edges)
+    longest_run = 0
+    current_run = 0
+    previous_turned_clockwise = None
+    # Going round twice lets a run that passes the starting point be
+    # counted whole.
+    for position in range(2 * edge_count):
+        edge = edges[position % edge_count]
+        next_edge = edges[(position + 1) % edge_count]
+        if edge.is_hidden or next_edge.is_hidden:
+            current_run = 0
+            previous_turned_clockwise = None
+            continue
+        # The cross product of two directions is positive when the second
+        # points clockwise of the first on screen, and its size, together
+        # with the dot product, gives the angle between them.
+        cross = (edge.line_direction[0] * next_edge.line_direction[1] -
+                 edge.line_direction[1] * next_edge.line_direction[0])
+        turn_degrees = abs(
+            math.degrees(
+                math.atan2(cross,
+                           edge.line_direction @ next_edge.line_direction)))
+        turned_clockwise = cross > 0
+        is_gentle = turn_degrees < GENTLE_TURN_LIMIT_DEGREES
+        if is_gentle and turned_clockwise == previous_turned_clockwise:
+            current_run += 1
+        elif is_gentle:
+            current_run = 1
+        else:
+            current_run = 0
+        previous_turned_clockwise = turned_clockwise if is_gentle else None
+        longest_run = max(longest_run, min(current_run, edge_count))
+    return longest_run >= GENTLE_TURNS_IN_A_CURVE
+
+
 def line_crossing(first_edge, second_edge):
     """Returns where two edges' lines cross, or None if they are parallel."""
     directions = numpy.column_stack(
@@ -897,6 +954,8 @@ def fit_polygon(region_number, region, scene):
         build_edges_without_false_corners(outline, corner_indexes,
                                           point_is_hidden),
         shortest_real_edge=SHORT_EDGE_LIMIT_IN_TOLERANCES * tolerance)
+    if traces_a_curve(edges):
+        return None
     snap_limit = CORNER_SNAP_LIMIT_IN_TOLERANCES * tolerance
 
     def polygon_with(straighten_cuts):

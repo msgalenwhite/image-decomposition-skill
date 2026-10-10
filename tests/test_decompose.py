@@ -285,7 +285,7 @@ def test_sun_and_hills_example_matches_the_committed_breakdown():
 def test_balloon_example_matches_the_committed_breakdown():
     """The second worked example is exactly what the script produces.
 
-    It holds every kind of shape at once: ellipses, a rounded rectangle, a
+    It holds five kinds of shape at once: ellipses, a rounded rectangle, a
     triangle, a star, and a four-cornered shape partly behind an ellipse.
     """
     breakdown = measure(BALLOON_EXAMPLE_FOLDER / 'original.png')
@@ -760,3 +760,65 @@ def test_command_line_reports_a_missing_image_without_a_traceback(
     assert exit_code == 1
     assert 'Could not open' in capsys.readouterr().err
     assert not output_folder.exists()
+
+
+def regular_polygon_corners(center, radius, side_count):
+    """Returns the corners of an even-sided shape, starting from its top."""
+    corners = []
+    for corner_number in range(side_count):
+        angle = 2 * math.pi * corner_number / side_count - math.pi / 2
+        corners.append((center[0] + radius * math.cos(angle),
+                        center[1] + radius * math.sin(angle)))
+    return corners
+
+
+def test_eight_sided_shape_stays_a_polygon(tmp_path):
+    """An octagon's corners turn sharply enough not to be taken for a curve."""
+    corners = regular_polygon_corners((50, 50), 35, side_count=8)
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners, MINT_GREEN)
+
+    image_path = draw_test_image(tmp_path, (600, 600), CHARCOAL, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert_same_corners(
+        shape_named(breakdown, 'green-polygon')['points'], corners)
+
+
+def test_twelve_sided_shape_is_treated_as_round(tmp_path):
+    """Many even sides that bend gently the same way are read as a curve."""
+    corners = regular_polygon_corners((50, 50), 35, side_count=12)
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners, MINT_GREEN)
+
+    image_path = draw_test_image(tmp_path, (600, 600), CHARCOAL, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert breakdown['layers_back_to_front'] == ['background', 'green-circle']
+
+
+def test_mostly_hidden_ellipse_is_not_mistaken_for_a_polygon(tmp_path):
+    """A short visible arc of an ellipse is still reported as an ellipse.
+
+    Only an arc along the left of the ellipse shows. The rest is under a
+    tilted rectangle, a triangle, and the bottom of the canvas. A curve
+    traces as a run of short edges, which must not be read as a polygon.
+    """
+    rectangle_corners = rotated_about((84, 74), [(72, 66), (96, 66), (96, 82),
+                                                 (72, 82)], 64)
+    triangle_corners = [(78, 100), (100, 82), (100, 100)]
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_ellipse(surface, percent_to_pixels, (80, 88), (14, 20), LAVENDER)
+        draw_polygon(surface, percent_to_pixels, rectangle_corners, SOFT_PINK)
+        draw_polygon(surface, percent_to_pixels, triangle_corners,
+                     BUTTER_YELLOW)
+
+    image_path = draw_test_image(tmp_path, (600, 600), SKY_BLUE, draw_shapes)
+    breakdown = measure(image_path)
+
+    ellipse = shape_named(breakdown, 'purple-ellipse')
+    assert ellipse['center_x'] == pytest.approx(80, abs=1.5)
+    assert ellipse['radius_x'] == pytest.approx(14, abs=1.5)

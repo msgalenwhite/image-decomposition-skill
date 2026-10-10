@@ -44,7 +44,10 @@ and prints the number of colors and shapes and a `redraw_match_percent`.
 Open `breakdown-preview.png`: the original is on the left, a redraw made
 only from the measured shapes is on the right.
 
-- They should look the same.
+- They should look the same. Look for small things in particular: thin
+  lines, dots, and narrow bands between shapes. The score measures area,
+  so something smaller than about half a percent of the picture can be
+  missing while the score stays above 99.5.
 - `redraw_match_percent` should be about 99.5 or higher for a suitable
   image. It scores every pixel and forgives only soft edges, so a lower
   number means something in the picture was left out or misplaced. Find
@@ -120,7 +123,8 @@ visible, and an ellipse is completed from any visible arc.
 - A shape split in two by a shape in front of it is reported as two
   shapes, and a shape hidden entirely is not found.
 - Polygons have at most 12 corners: a six-pointed star is found, an
-  eight-pointed one is `irregular`. A side shorter than 2% of the canvas
+  eight-pointed one is `irregular`. A shape with ten or more even sides
+  bends so gently that it is reported as a circle or ellipse. A side shorter than 2% of the canvas
   width is treated as a blunted point and dropped, and points sharper
   than about 20 degrees come back slightly blunt.
 - A rounded rectangle is recognized only when all four corners show.
