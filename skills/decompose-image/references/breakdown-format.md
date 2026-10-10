@@ -20,7 +20,7 @@ Rotations are in degrees. Positive is clockwise on screen.
 | `shapes` | One entry per shape, in the same order. |
 | `groups` | Shapes that form one object. Empty until filled in with `rename_shapes.py`. |
 | `simplifications` | Plain sentences listing what the breakdown leaves out or assumes. |
-| `redraw_match_percent` | When the image is redrawn from the shapes, the share of the original's flat-colored pixels that get the right color. Blended pixels along edges are not scored. |
+| `redraw_match_percent` | When the image is redrawn from the shapes, the share of all the original's pixels that get the right color. A pixel on a soft edge counts as right when it blends the redraw's colors within two pixels of it. Anything left out of the breakdown lowers this number. |
 
 ## canvas
 
@@ -69,8 +69,9 @@ The remaining fields depend on the kind.
 | `rotation_degrees` | How far the box is turned about its own center, between -45 and 45. `0` for an upright box. |
 | `corner_radius` | Rounded rectangles only: the radius of each corner. |
 
-To place a tilted rectangle, draw the upright box at `left`, `top` and
-then turn it about its center. This matches how CSS and SVG rotate.
+`left`, `top`, `width`, and `height` describe the box as it would sit if
+it were upright. `rotation_degrees` then says how far that box is turned
+about its center.
 
 ### triangle, polygon
 
@@ -97,4 +98,4 @@ upright box around the visible part of the shape, not the shape itself.
 
 - Added `rounded-rectangle`, `triangle`, and `polygon`.
 - Rectangles gained `rotation_degrees`.
-- `redraw_match_percent` now scores flat-colored pixels only.
+- `redraw_match_percent` no longer loses points for soft edges. It still scores every pixel.

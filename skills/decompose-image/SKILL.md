@@ -46,7 +46,11 @@ only from the measured shapes is on the right.
 
 - They should look the same.
 - `redraw_match_percent` should be about 99.5 or higher for a suitable
-  image. It scores only flat-colored pixels, so soft edges do not lower it.
+  image. It scores every pixel and forgives only soft edges, so a lower
+  number means something in the picture was left out or misplaced. Find
+  out what before going on. After using `--maximum-colors` or
+  `--minimum-shape-percent`, a low score usually means the option removed
+  something real.
 - Check the layer order. Shapes that do not touch can come out in any
   order, which is harmless. Shapes that overlap must be the right way round.
 - If a shape is missing, misplaced, or in the wrong layer, do not hand-edit
@@ -87,7 +91,7 @@ breakdown leaves out.
 
 - The meaning of every field: `references/breakdown-format.md`
 - Worked examples: `examples/sun-and-hills/` (four shapes) and
-  `examples/balloon-over-hills/` (ten shapes, every kind)
+  `examples/balloon-over-hills/` (ten shapes of five kinds)
 
 ## What it can fit
 
@@ -115,3 +119,12 @@ visible, and an ellipse is completed from any visible arc.
   it, so always check it in step 3.
 - A shape split in two by a shape in front of it is reported as two
   shapes, and a shape hidden entirely is not found.
+- Polygons have at most 12 corners: a six-pointed star is found, an
+  eight-pointed one is `irregular`. A side shorter than 2% of the canvas
+  width is treated as a blunted point and dropped, and points sharper
+  than about 20 degrees come back slightly blunt.
+- A rounded rectangle is recognized only when all four corners show.
+  Partly hidden, or cut by the canvas edge, it comes back as a plain
+  rectangle or as `irregular`.
+- When two touching shapes could each be in front, the choice between
+  them is arbitrary. The redraw looks the same either way.

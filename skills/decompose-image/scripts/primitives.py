@@ -37,9 +37,29 @@ MINIMUM_OUTLINE_POINTS = 24
 # on slanted edges, small enough to keep real corners.
 POLYGON_SIMPLIFY_TOLERANCE_PERCENT = 0.4
 
-# A traced outline with more corners than this is not treated as a polygon.
-# Curves trace as dozens of short edges, so this keeps curved shapes out.
+# A polygon may have at most this many corners. Twelve is enough for a
+# six-pointed star. The limit cannot go much higher: a large curve traces
+# as thirteen or more short straight edges, and with a higher limit that
+# many-cornered polygon follows a slightly uneven hill more closely than
+# an ellipse does, so the hill would be reported as a polygon.
 MAXIMUM_POLYGON_POINTS = 12
+
+# A freshly traced outline may have up to this many corners before it is
+# tidied. The tidying removes many of them: a sharp tip traces as two
+# corners, and a curved bite left by a shape in front traces as a dozen
+# that collapse into one rebuilt corner or one straight cut. So the limit
+# on the finished polygon is checked afterwards, and this looser limit only
+# stops work early on outlines that are plainly curves.
+MAXIMUM_TRACED_CORNERS = 48
+
+# A straight line needs at least this many points before fitting one is
+# more trustworthy than simply joining the two ends.
+MINIMUM_POINTS_TO_FIT_A_LINE = 4
+
+# When solving for an ellipse, a determinant closer to zero than this means
+# the outline points lie along a straight line or a parabola, which has no
+# center to solve for.
+NO_ELLIPSE_CENTER_DETERMINANT = 1e-12
 
 # Each polygon edge is refitted as a straight line through its outline
 # points, ignoring this share at both ends where corners round off.
@@ -52,10 +72,14 @@ EDGE_END_TRIM_FRACTION = 0.15
 # the two sides would really meet.
 CORNER_SNAP_LIMIT_IN_TOLERANCES = 5
 
-# A visible edge shorter than this many simplify-tolerances is not a real
-# side. It is the blunt end that soft edges leave on a sharp point, so it
-# is dropped and the sides either side of it are extended to meet.
-SHORT_EDGE_LIMIT_IN_TOLERANCES = 3
+# An edge shorter than this many simplify-tolerances is not a real side.
+# It is the blunt end that soft edges leave on a sharp point, so it is
+# dropped and the sides either side of it are extended to meet. The
+# sharper the point, the longer its blunt end: five tolerances (2% of the
+# canvas width) is long enough for a point as sharp as 20 degrees, such as
+# where a slanted side runs into the canvas frame. The price is that a
+# real side shorter than 2% of the canvas width is treated as a blunt end.
+SHORT_EDGE_LIMIT_IN_TOLERANCES = 5
 
 # Two neighboring edges whose fitted lines differ in direction by less
 # than this are one straight side, and the corner between them is not
@@ -428,7 +452,7 @@ def fit_ellipse(region_number, region, scene):
     squared_x, cross, squared_y, linear_x, linear_y = coefficients
     quadratic_part = numpy.array([[squared_x, cross / 2],
                                   [cross / 2, squared_y]])
-    if abs(numpy.linalg.det(quadratic_part)) < 1e-12:
+    if abs(numpy.linalg.det(quadratic_part)) < NO_ELLIPSE_CENTER_DETERMINANT:
         return None
     center = numpy.linalg.solve(2 * quadratic_part, [-linear_x, -linear_y])
     level = 1 + center @ quadratic_part @ center
@@ -440,8 +464,7 @@ def fit_ellipse(region_number, region, scene):
     radii = numpy.sqrt(level / axis_strengths) * scale
 
     # Call the axis that lies closer to horizontal the "width" axis, and
-    # report how far it is tilted. Positive means clockwise on screen,
-    # which is also the direction CSS and SVG rotate.
+    # report how far it is tilted. Positive means clockwise on screen.
     first_direction = axis_directions[:, 0]
     width_axis = 0 if abs(first_direction[0]) >= abs(first_direction[1]) else 1
     width_direction = axis_directions[:, width_axis]
@@ -560,7 +583,7 @@ def fit_line_through(points, start_point, end_point):
     direction along which they are most spread out.
     """
     toward_end = end_point - start_point
-    if len(points) < 4:
+    if len(points) < MINIMUM_POINTS_TO_FIT_A_LINE:
         return start_point, toward_end / numpy.linalg.norm(toward_end)
     average = points.mean(axis=0)
     spread_directions = numpy.linalg.svd(points - average,
@@ -632,10 +655,18 @@ def build_edges_without_false_corners(outline, corner_indexes, point_is_hidden):
 
 
 def without_blunt_tips(edges, shortest_real_edge):
-    """Returns the edges with the stubs at blunted sharp points removed."""
+    """Returns the edges with stubs too short to be real sides removed.
+
+    A stub appears where soft edges blunt a sharp point, and also where a
+    side runs into the canvas frame: its last few pixels count as hidden
+    and trace as a tiny edge of their own. Either way the sides on both
+    sides of the stub are then extended until they meet, which puts the
+    corner where it really is.
+    """
     real_edges = [
-        edge for edge in edges if edge.is_hidden or numpy.linalg.norm(
-            edge.end_point - edge.start_point) >= shortest_real_edge
+        edge for edge in edges
+        if numpy.linalg.norm(edge.end_point -
+                             edge.start_point) >= shortest_real_edge
     ]
     fewest_sides_of_a_polygon = 3
     if len(real_edges) < fewest_sides_of_a_polygon:
@@ -845,7 +876,7 @@ def fit_polygon(region_number, region, scene):
     canvas_width = scene.canvas_shape()[1]
     tolerance = canvas_width * POLYGON_SIMPLIFY_TOLERANCE_PERCENT / 100
     corner_indexes = find_corner_indexes(outline, tolerance)
-    if not 3 <= len(corner_indexes) <= MAXIMUM_POLYGON_POINTS:
+    if not 3 <= len(corner_indexes) <= MAXIMUM_TRACED_CORNERS:
         return None
 
     # Look up, for every outline point, whether a shape in front is close.
@@ -874,7 +905,8 @@ def fit_polygon(region_number, region, scene):
             resolve_hidden_edges(edges, region_number, scene, straighten_cuts),
             snap_limit)
         fewest_corners_of_a_polygon = 3
-        if len(corners) < fewest_corners_of_a_polygon:
+        if not (fewest_corners_of_a_polygon <= len(corners) <=
+                MAXIMUM_POLYGON_POINTS):
             return None
         corners = in_reading_order(corners)
         candidate = as_rectangle_if_square_cornered(corners)

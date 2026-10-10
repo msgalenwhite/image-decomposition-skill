@@ -10,8 +10,10 @@ width. See references/breakdown-format.md for every field.
 
 import colorsys
 import dataclasses
+import math
 
 import numpy
+from scipy import ndimage
 
 import primitives
 
@@ -30,6 +32,13 @@ BACKGROUND_COVERAGE_PERCENT = 99.0
 # of the original. Looser than the labeling tolerance, to allow for the
 # original's compression noise on top of the palette's rounding.
 REDRAW_MATCH_TOLERANCE = 24
+
+# A soft edge is a band of pixels that blend the colors on either side of
+# it. When scoring, a pixel may match a blend of the redraw's colors found
+# within this many pixels of it. Two pixels covers the soft edges of an
+# ordinary flat illustration at working size. A wider band means the image
+# is blurred, and its score should drop to say so.
+SOFT_EDGE_REACH_PIXELS = 2
 
 # The redraw is painted this many times larger than the working image and
 # then shrunk back. Shrinking blends the colors along each edge, the same
@@ -265,23 +274,42 @@ def name_shapes(region_map, back_to_front, fitted, color_names):
     return make_unique_names(base_names)
 
 
-def redraw_match_percent(pixels, redrawn_pixels, is_flat_color):
-    """Returns the share of flat-colored pixels the redraw gets right.
+def redraw_match_percent(pixels, redrawn_pixels):
+    """Returns the share of the image's pixels the redraw gets right.
 
-    Only pixels that clearly show one palette color are scored. The thin
-    bands of blended pixels along edges are left out, because a blend has
-    no single right answer: how soft an edge looks depends on how the
-    image was made, not on where the shape is. A shape in the wrong place,
-    the wrong size, or the wrong layer still loses points, because it
-    paints the wrong color over flat pixels.
+    Every pixel is scored. A pixel is right when its color is close to the
+    redraw's color at the same spot. It is also right when it could be a
+    blend of the redraw's colors within a couple of pixels, because that
+    is what a soft edge is: the original shows a mix of the two colors
+    that meet there, and how soft the mix is depends on how the image was
+    made, not on where the shape is.
+
+    The blend test asks, for red, green, and blue separately, whether the
+    original's value lies between the lowest and highest values the redraw
+    has nearby. Away from edges the redraw has one color nearby, so the
+    test is the same as the plain closeness test.
+
+    Anything the breakdown leaves out lowers the score: a missing shape, a
+    dropped color, or a thin line shows the wrong color over its whole
+    area. A shape more than a couple of pixels out of place does too.
     """
-    color_distances = numpy.sqrt(((pixels - redrawn_pixels)**2).sum(axis=-1))
-    matches = color_distances <= REDRAW_MATCH_TOLERANCE
-    return round(100 * float(matches[is_flat_color].mean()), 2)
+    reach = 2 * SOFT_EDGE_REACH_PIXELS + 1
+    neighborhood = (reach, reach, 1)  # across and down, but not across channels
+    lowest_nearby = ndimage.minimum_filter(redrawn_pixels, size=neighborhood)
+    highest_nearby = ndimage.maximum_filter(redrawn_pixels, size=neighborhood)
+    # The plain closeness test measures straight-line distance over all
+    # three channels together. Spread evenly, that distance is this much
+    # on each channel.
+    channel_count = pixels.shape[-1]
+    channel_tolerance = REDRAW_MATCH_TOLERANCE / math.sqrt(channel_count)
+    within_blend_range = ((pixels >= lowest_nearby - channel_tolerance) &
+                          (pixels <= highest_nearby + channel_tolerance))
+    matches = within_blend_range.all(axis=-1)
+    return round(100 * float(matches.mean()), 2)
 
 
-def build_breakdown(source_name, original_size, pixels, palette, is_flat_color,
-                    region_map, back_to_front, fits, minimum_shape_percent):
+def build_breakdown(source_name, original_size, pixels, palette, region_map,
+                    back_to_front, fits, minimum_shape_percent):
     """Returns the breakdown dictionary and the redrawn pixels."""
     canvas_shape = region_map.region_of_pixel.shape
     fits = dict(fits)
@@ -330,10 +358,8 @@ def build_breakdown(source_name, original_size, pixels, palette, is_flat_color,
         color_areas[region.color_index] += region.area_pixels
     canvas_area = canvas_shape[0] * canvas_shape[1]
     breakdown = {
-        'schema_version':
-            SCHEMA_VERSION,
-        'source':
-            source_name,
+        'schema_version': SCHEMA_VERSION,
+        'source': source_name,
         'canvas': {
             'width_pixels':
                 original_size[0],
@@ -354,15 +380,11 @@ def build_breakdown(source_name, original_size, pixels, palette, is_flat_color,
                 round(100 * float(color_areas[color_index]) / canvas_area, 1),
         } for color_index, (color_name,
                             color) in enumerate(zip(color_names, palette))],
-        'layers_back_to_front':
-            shape_names,
-        'shapes':
-            shapes,
+        'layers_back_to_front': shape_names,
+        'shapes': shapes,
         'groups': [],
-        'simplifications':
-            simplifications,
-        'redraw_match_percent':
-            redraw_match_percent(pixels, redrawn_pixels, is_flat_color),
+        'simplifications': simplifications,
+        'redraw_match_percent': redraw_match_percent(pixels, redrawn_pixels),
     }
     return breakdown, redrawn_pixels
 
@@ -441,8 +463,8 @@ def breakdown_as_markdown(breakdown):
         '## Accuracy',
         '',
         'Redrawing the image from these shapes gives the right color on '
-        f'{match_percent}% of the original\'s flat-colored pixels. The '
-        'blended pixels along edges are not scored. '
+        f'{match_percent}% of the pixels in the original. A soft edge '
+        'counts as right when it blends the colors that meet there. '
         'See `breakdown-preview.png` (original on the left, redraw on the '
         'right).',
         '',

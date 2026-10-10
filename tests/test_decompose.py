@@ -612,3 +612,151 @@ def test_renaming_refuses_unknown_and_clipped_names():
     with pytest.raises(rename_shapes.RenameError):
         rename_shapes.apply_renames(breakdown, {'pink-circle': 'green-ellipse'},
                                     {}, {})
+
+
+@pytest.mark.parametrize('inner_radius', [11.5, 13, 16.4, 22])
+def test_five_point_stars_of_every_proportion_are_traced(
+        tmp_path, inner_radius):
+    """Thin-armed and fat-armed stars alike come back with ten corners.
+
+    A sharp tip first traces as two corners. This checks the corner limit
+    is applied after those are tidied into one, for spiky and stubby stars.
+    """
+    corners = star_corners((50, 52), 36, inner_radius, point_count=5)
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners, BUTTER_YELLOW)
+
+    image_path = draw_test_image(tmp_path, (600, 600), CHARCOAL, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert breakdown['layers_back_to_front'] == ['background', 'yellow-polygon']
+    assert_same_corners(
+        shape_named(breakdown, 'yellow-polygon')['points'], corners)
+
+
+def test_six_point_star_uses_all_twelve_allowed_corners(tmp_path):
+    """A six-pointed star has exactly the most corners a polygon may have."""
+    corners = star_corners((50, 50), 40, 20, point_count=6)
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners, BUTTER_YELLOW)
+
+    image_path = draw_test_image(tmp_path, (600, 600), CHARCOAL, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert_same_corners(
+        shape_named(breakdown, 'yellow-polygon')['points'], corners)
+
+
+def test_rectangle_with_a_large_round_bite_is_still_a_rectangle(tmp_path):
+    """A big circle over one corner does not stop the rectangle being found.
+
+    The bite's curved edge traces as many corners, which are all hidden and
+    collapse into the one rebuilt corner underneath the circle.
+    """
+    tilt_degrees = 20
+    upright_corners = [(17, 30), (83, 30), (83, 70), (17, 70)]
+    corners = rotated_about((50, 50), upright_corners, tilt_degrees)
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners, SOFT_PINK)
+        draw_ellipse(surface, percent_to_pixels, (33, 33), (17, 17), MINT_GREEN)
+
+    image_path = draw_test_image(tmp_path, (600, 600), SKY_BLUE, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert breakdown['layers_back_to_front'] == [
+        'background', 'pink-rectangle', 'green-circle'
+    ]
+    rectangle = shape_named(breakdown, 'pink-rectangle')
+    assert rectangle['width'] == pytest.approx(66, abs=POSITION_TOLERANCE)
+    assert rectangle['height'] == pytest.approx(40, abs=POSITION_TOLERANCE)
+    assert rectangle['rotation_degrees'] == pytest.approx(tilt_degrees, abs=1)
+
+
+def test_mountain_filling_the_bottom_of_the_canvas_is_a_triangle(tmp_path):
+    """A triangle whose base corners sit on the canvas corners has three."""
+    corners = [(50, 25), (100, 100), (0, 100)]
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners, CHARCOAL)
+
+    image_path = draw_test_image(tmp_path, (600, 600), SKY_BLUE, draw_shapes)
+    breakdown = measure(image_path)
+
+    mountain = shape_named(breakdown, 'gray-triangle')
+    assert_same_corners(mountain['points'], corners)
+
+
+def test_triangle_cut_by_the_side_of_the_canvas_has_four_corners(tmp_path):
+    """Where the frame cuts a corner off, exactly one new corner replaces it.
+
+    The triangle's bottom-left corner is off the canvas. The frame cuts it
+    where the left side crosses the canvas edge, two thirds of the way down.
+    """
+    corners_as_drawn = [(100 / 6, 100 / 3), (400 / 6, 100), (-50 / 6, 100)]
+    where_the_left_side_meets_the_frame = (0, 100 - 400 / 6 / 3)
+    visible_corners = [
+        corners_as_drawn[0], corners_as_drawn[1], (0, 100),
+        where_the_left_side_meets_the_frame
+    ]
+
+    def draw_shapes(surface, percent_to_pixels):
+        draw_polygon(surface, percent_to_pixels, corners_as_drawn, CHARCOAL)
+
+    image_path = draw_test_image(tmp_path, (600, 600), SKY_BLUE, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert_same_corners(
+        shape_named(breakdown, 'gray-polygon')['points'], visible_corners)
+
+
+def test_score_drops_when_a_color_is_left_out():
+    """Leaving shapes out of the breakdown must show up in the score.
+
+    Keeping only two of the example's four colors loses the sun and one
+    hill, about a quarter of the picture.
+    """
+    breakdown, unused_preview_image = decompose.decompose(EXAMPLE_FOLDER /
+                                                          'original.webp',
+                                                          maximum_colors=2)
+
+    assert len(breakdown['shapes']) == 2
+    assert breakdown['redraw_match_percent'] < 80
+
+
+def test_score_drops_when_thin_lines_are_missed(tmp_path):
+    """Lines too thin to be measured still count against the score.
+
+    Eight lines, each a quarter of a percent thick and most of the picture
+    wide, cover 1.6 percent of it. None can be reported as a shape, so the
+    score must fall by about that much.
+    """
+    line_thickness = 0.25
+    line_tops = [10, 20, 30, 40, 60, 70, 80, 90]
+
+    def draw_shapes(surface, percent_to_pixels):
+        for line_top in line_tops:
+            draw_rectangle(surface, percent_to_pixels, (10, line_top),
+                           (80, line_thickness), CHARCOAL)
+
+    image_path = draw_test_image(tmp_path, (800, 800), SKY_BLUE, draw_shapes)
+    breakdown = measure(image_path)
+
+    assert breakdown['layers_back_to_front'] == ['background']
+    assert breakdown['redraw_match_percent'] < 99
+
+
+def test_command_line_reports_a_missing_image_without_a_traceback(
+        tmp_path, capsys):
+    """A wrong path gives a one-line message and leaves no folder behind."""
+    output_folder = tmp_path / 'never-made'
+    exit_code = decompose.main([
+        str(tmp_path / 'no-such-image.png'), '--output-folder',
+        str(output_folder)
+    ])
+
+    assert exit_code == 1
+    assert 'Could not open' in capsys.readouterr().err
+    assert not output_folder.exists()

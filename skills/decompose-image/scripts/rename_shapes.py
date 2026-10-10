@@ -145,6 +145,9 @@ def main(arguments):
     except RenameError as error:
         print(error, file=sys.stderr)
         return 1
+    except (OSError, json.JSONDecodeError) as error:
+        print(f'Could not read {breakdown_path}: {error}', file=sys.stderr)
+        return 1
     breakdown_path.write_text(json.dumps(breakdown, indent=2) + '\n')
     (options.folder / 'breakdown.md').write_text(
         breakdown_report.breakdown_as_markdown(breakdown))

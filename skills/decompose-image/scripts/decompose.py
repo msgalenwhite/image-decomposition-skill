@@ -30,6 +30,7 @@ import sys
 
 import numpy
 from PIL import Image
+from PIL import UnidentifiedImageError
 
 import breakdown_report
 import image_regions
@@ -37,7 +38,7 @@ import layer_order
 
 
 class UnsuitableImageError(ValueError):
-    """Raised when an image has no flat areas of color to measure."""
+    """Raised when nothing in the image can be measured."""
 
 
 def decompose(image_path, maximum_colors=None, minimum_shape_percent=None):
@@ -47,8 +48,10 @@ def decompose(image_path, maximum_colors=None, minimum_shape_percent=None):
     image_path = pathlib.Path(image_path)
     pixels, original_size = image_regions.load_working_pixels(image_path)
     unsuitable = UnsuitableImageError(
-        f'{image_path.name} has no flat areas of color. This tool is for '
-        'flat illustrations, not photographs or gradients.')
+        f'Nothing to measure in {image_path.name}. Either it has no flat '
+        'areas of color (this tool is for flat illustrations, not '
+        'photographs or gradients), or --maximum-colors or '
+        '--minimum-shape-percent is set so that nothing is left.')
     palette = image_regions.find_palette(pixels, maximum_colors)
     if len(palette) == 0:
         raise unsuitable
@@ -59,9 +62,8 @@ def decompose(image_path, maximum_colors=None, minimum_shape_percent=None):
         raise unsuitable
     back_to_front, fits = layer_order.find_layer_order(region_map)
     breakdown, redrawn_pixels = breakdown_report.build_breakdown(
-        image_path.name, original_size, pixels, palette, labels
-        != image_regions.UNLABELED, region_map, back_to_front, fits,
-        minimum_shape_percent)
+        image_path.name, original_size, pixels, palette, region_map,
+        back_to_front, fits, minimum_shape_percent)
     side_by_side = numpy.concatenate([pixels, redrawn_pixels], axis=1)
     preview_image = Image.fromarray(side_by_side.astype(numpy.uint8))
     return breakdown, preview_image
@@ -93,9 +95,6 @@ def main(arguments):
         default=image_regions.DEFAULT_MINIMUM_SHAPE_PERCENT,
         help='Drop regions smaller than this share of the image.')
     options = parser.parse_args(arguments)
-    output_folder = options.output_folder or options.image.parent
-    output_folder.mkdir(parents=True, exist_ok=True)
-
     try:
         breakdown, preview_image = decompose(options.image,
                                              options.maximum_colors,
@@ -103,6 +102,14 @@ def main(arguments):
     except UnsuitableImageError as error:
         print(error, file=sys.stderr)
         return 1
+    except (OSError, UnidentifiedImageError) as error:
+        print(f'Could not open {options.image} as an image: {error}',
+              file=sys.stderr)
+        return 1
+    # The folder is made only after measuring succeeds, so a refused image
+    # does not leave an empty folder behind.
+    output_folder = options.output_folder or options.image.parent
+    output_folder.mkdir(parents=True, exist_ok=True)
     write_breakdown_files(breakdown, output_folder)
     preview_image.save(output_folder / 'breakdown-preview.png')
     print(

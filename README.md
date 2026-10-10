@@ -18,10 +18,10 @@ For the picture above, the skill reports eight colors and these ten shapes, back
 | yellow-polygon | polygon | the star: ten corners |
 | yellow-polygon-two | polygon | four corners at (41.1, 54.6), (58.9, 54.8), (54.0, 66.1), (46.1, 66.1) |
 | white-ellipse | ellipse | center 20.1, 18.0; radii 9.0, 4.0 |
-| green-ellipse | ellipse | center 29.9, 101.6; radii 42.7, 26.6 |
-| gray-triangle | triangle | corners at (12.1, 60.0), (20.1, 78.1), (4.0, 78.1) |
 | white-ellipse-two | ellipse | center 78.1, 32.0; radii 11.0, 5.0 |
 | orange-rounded-rectangle | rounded rectangle | left 45.0, top 66.0, width 10.1, height 8.1; corner radius 2.2 |
+| green-ellipse | ellipse | center 29.9, 101.6; radii 42.7, 26.6 |
+| gray-triangle | triangle | corners at (12.1, 60.0), (20.1, 78.1), (4.0, 78.1) |
 | pink-ellipse | ellipse | center 50.1, 38.0; radii 17.0, 19.0 |
 | purple-ellipse | ellipse | center 80.2, 110.0; radii 45.2, 32.0 |
 
@@ -77,6 +77,9 @@ python3 skills/decompose-image/scripts/rename_shapes.py my-breakdown --shape pin
 - A hidden part is a best guess. In the picture above, the yellow piece is closed off straight across where the balloon covers it, and the hills' hidden lower halves are uncertain because only a shallow arc of each shows.
 - Layer order comes from overlaps and can be fooled by unusual arrangements, so the skill tells the agent to check it by eye.
 - A shape split in two by a shape in front of it is reported as two shapes, and a shape hidden entirely is not found.
+- Polygons have at most 12 corners, so a six-pointed star is found and an eight-pointed one is reported as `irregular`. A side shorter than 2% of the canvas width is treated as a blunted point and dropped, and points sharper than about 20 degrees come back slightly blunt.
+- A rounded rectangle is recognized only when all four corners show. Partly hidden, or cut by the canvas edge, it is reported as a plain rectangle or as `irregular`.
+- When two touching shapes could each be in front, the choice between them is arbitrary. The redraw looks the same either way, but the layer order may be wrong.
 
 ## Develop
 
@@ -87,7 +90,7 @@ pylint skills tests
 yapf --diff --recursive skills tests
 ```
 
-The tests draw pictures with known shapes and check that the script reports the same shapes back. They cover every kind of shape, shapes partly hidden behind others, a shape cut off by the canvas edge, and a 25-shape picture with a time limit. Rules for contributors, human or agent, are in [`AGENTS.md`](AGENTS.md).
+The tests draw pictures with known shapes and check that the script reports the same shapes back. They cover every kind of shape the script can fit, shapes partly hidden behind others, a shape cut off by the canvas edge, and a 25-shape picture with a time limit. Rules for contributors, human or agent, are in [`AGENTS.md`](AGENTS.md).
 
 ## Code Quality & Standards
 
