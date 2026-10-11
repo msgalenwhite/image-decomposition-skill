@@ -1,0 +1,242 @@
+{
+  "schema_version": 2,
+  "source": "original.png",
+  "canvas": {
+    "width_pixels": 1000,
+    "height_pixels": 1000,
+    "height_as_percent_of_width": 100.0,
+    "units": "Every position and size is a percentage of the canvas width, measured from the top-left corner."
+  },
+  "palette": [
+    {
+      "name": "blue",
+      "hex": "#74c6f3",
+      "visible_percent": 61.1
+    },
+    {
+      "name": "purple",
+      "hex": "#c2a1e3",
+      "visible_percent": 11.1
+    },
+    {
+      "name": "green",
+      "hex": "#94deba",
+      "visible_percent": 10.7
+    },
+    {
+      "name": "pink",
+      "hex": "#f8bab0",
+      "visible_percent": 10.2
+    },
+    {
+      "name": "white",
+      "hex": "#ffffff",
+      "visible_percent": 2.9
+    },
+    {
+      "name": "yellow",
+      "hex": "#fae282",
+      "visible_percent": 1.8
+    },
+    {
+      "name": "gray",
+      "hex": "#36393f",
+      "visible_percent": 1.5
+    },
+    {
+      "name": "orange",
+      "hex": "#966950",
+      "visible_percent": 0.8
+    }
+  ],
+  "layers_back_to_front": [
+    "background",
+    "yellow-polygon",
+    "yellow-polygon-two",
+    "white-ellipse",
+    "white-ellipse-two",
+    "orange-rounded-rectangle",
+    "green-ellipse",
+    "gray-triangle",
+    "pink-ellipse",
+    "purple-ellipse"
+  ],
+  "shapes": [
+    {
+      "name": "background",
+      "primitive": "rectangle",
+      "color": "blue",
+      "visible_percent": 61.1,
+      "left": 0.0,
+      "top": 0.0,
+      "width": 100.0,
+      "height": 100.0,
+      "rotation_degrees": 0.0
+    },
+    {
+      "name": "yellow-polygon",
+      "primitive": "polygon",
+      "color": "yellow",
+      "visible_percent": 0.6,
+      "points": [
+        {
+          "x": 84.0,
+          "y": 6.0
+        },
+        {
+          "x": 85.9,
+          "y": 10.7
+        },
+        {
+          "x": 90.8,
+          "y": 10.8
+        },
+        {
+          "x": 86.9,
+          "y": 13.9
+        },
+        {
+          "x": 88.2,
+          "y": 18.7
+        },
+        {
+          "x": 84.1,
+          "y": 16.0
+        },
+        {
+          "x": 79.9,
+          "y": 18.7
+        },
+        {
+          "x": 81.2,
+          "y": 13.9
+        },
+        {
+          "x": 77.3,
+          "y": 10.8
+        },
+        {
+          "x": 82.2,
+          "y": 10.7
+        }
+      ]
+    },
+    {
+      "name": "yellow-polygon-two",
+      "primitive": "polygon",
+      "color": "yellow",
+      "visible_percent": 1.2,
+      "points": [
+        {
+          "x": 41.1,
+          "y": 54.6
+        },
+        {
+          "x": 58.9,
+          "y": 54.8
+        },
+        {
+          "x": 54.0,
+          "y": 66.1
+        },
+        {
+          "x": 46.1,
+          "y": 66.1
+        }
+      ]
+    },
+    {
+      "name": "white-ellipse",
+      "primitive": "ellipse",
+      "color": "white",
+      "visible_percent": 1.1,
+      "center_x": 20.1,
+      "center_y": 18.0,
+      "radius_x": 9.0,
+      "radius_y": 4.0,
+      "rotation_degrees": -0.0
+    },
+    {
+      "name": "white-ellipse-two",
+      "primitive": "ellipse",
+      "color": "white",
+      "visible_percent": 1.7,
+      "center_x": 78.1,
+      "center_y": 32.0,
+      "radius_x": 11.0,
+      "radius_y": 5.0,
+      "rotation_degrees": -0.0
+    },
+    {
+      "name": "orange-rounded-rectangle",
+      "primitive": "rounded-rectangle",
+      "color": "orange",
+      "visible_percent": 0.8,
+      "left": 45.0,
+      "top": 66.0,
+      "width": 10.1,
+      "height": 8.1,
+      "rotation_degrees": 0.0,
+      "corner_radius": 2.2
+    },
+    {
+      "name": "green-ellipse",
+      "primitive": "ellipse",
+      "color": "green",
+      "visible_percent": 10.7,
+      "center_x": 29.9,
+      "center_y": 101.6,
+      "radius_x": 42.7,
+      "radius_y": 26.6,
+      "rotation_degrees": -0.3
+    },
+    {
+      "name": "gray-triangle",
+      "primitive": "triangle",
+      "color": "gray",
+      "visible_percent": 1.5,
+      "points": [
+        {
+          "x": 12.1,
+          "y": 60.0
+        },
+        {
+          "x": 20.1,
+          "y": 78.1
+        },
+        {
+          "x": 4.0,
+          "y": 78.1
+        }
+      ]
+    },
+    {
+      "name": "pink-ellipse",
+      "primitive": "ellipse",
+      "color": "pink",
+      "visible_percent": 10.2,
+      "center_x": 50.1,
+      "center_y": 38.0,
+      "radius_x": 17.0,
+      "radius_y": 19.0,
+      "rotation_degrees": 0.1
+    },
+    {
+      "name": "purple-ellipse",
+      "primitive": "ellipse",
+      "color": "purple",
+      "visible_percent": 11.1,
+      "center_x": 80.2,
+      "center_y": 110.0,
+      "radius_x": 45.2,
+      "radius_y": 32.0,
+      "rotation_degrees": 0.4
+    }
+  ],
+  "groups": [],
+  "simplifications": [
+    "Each region is flattened to one color: the median of its pixels.",
+    "Shapes partly hidden behind others are completed from the part of their outline that is visible."
+  ],
+  "redraw_match_percent": 100.0
+}

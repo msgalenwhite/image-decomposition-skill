@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "source": "original.webp",
   "canvas": {
     "width_pixels": 1600,
@@ -11,22 +11,22 @@
     {
       "name": "blue",
       "hex": "#74c6f3",
-      "visible_percent": 54.3
+      "visible_percent": 54.5
     },
     {
       "name": "purple",
       "hex": "#c2a1e3",
-      "visible_percent": 19.8
+      "visible_percent": 20.0
     },
     {
       "name": "green",
       "hex": "#94deba",
-      "visible_percent": 16.7
+      "visible_percent": 16.8
     },
     {
       "name": "pink",
       "hex": "#f8bab0",
-      "visible_percent": 8.6
+      "visible_percent": 8.7
     }
   ],
   "layers_back_to_front": [
@@ -40,17 +40,18 @@
       "name": "background",
       "primitive": "rectangle",
       "color": "blue",
-      "visible_percent": 54.3,
+      "visible_percent": 54.5,
       "left": 0.0,
       "top": 0.0,
       "width": 100.0,
-      "height": 100.0
+      "height": 100.0,
+      "rotation_degrees": 0.0
     },
     {
       "name": "pink-circle",
       "primitive": "circle",
       "color": "pink",
-      "visible_percent": 8.6,
+      "visible_percent": 8.7,
       "center_x": 50.0,
       "center_y": 49.6,
       "radius_x": 18.6,
@@ -61,23 +62,23 @@
       "name": "green-ellipse",
       "primitive": "ellipse",
       "color": "green",
-      "visible_percent": 16.7,
-      "center_x": 33.6,
-      "center_y": 96.5,
-      "radius_x": 34.2,
-      "radius_y": 42.5,
-      "rotation_degrees": 3.3
+      "visible_percent": 16.8,
+      "center_x": 33.7,
+      "center_y": 96.6,
+      "radius_x": 34.3,
+      "radius_y": 42.6,
+      "rotation_degrees": 2.8
     },
     {
       "name": "purple-ellipse",
       "primitive": "ellipse",
       "color": "purple",
-      "visible_percent": 19.8,
+      "visible_percent": 20.0,
       "center_x": 66.1,
-      "center_y": 111.5,
-      "radius_x": 35.1,
-      "radius_y": 51.0,
-      "rotation_degrees": 10.2
+      "center_y": 111.9,
+      "radius_x": 35.3,
+      "radius_y": 51.4,
+      "rotation_degrees": 9.9
     }
   ],
   "groups": [],
@@ -85,5 +86,5 @@
     "Each region is flattened to one color: the median of its pixels.",
     "Shapes partly hidden behind others are completed from the part of their outline that is visible."
   ],
-  "redraw_match_percent": 99.41
+  "redraw_match_percent": 99.84
 }

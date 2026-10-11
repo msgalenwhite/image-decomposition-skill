@@ -1,3 +1,4 @@
+contourpy
 numpy
 pillow
 scipy
